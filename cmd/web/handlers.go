@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/prasunka/postal-routing-server/pkg/models/mysql"
@@ -34,8 +35,14 @@ func createRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	routes := mysql.RouteModel{DB: DB}
+	endpoints := mysql.EndpointModel{DB: DB}
 
-	routes.Insert(1, payload.Forwardfrom)
+	id, err := endpoints.Insert(payload.Forwardto)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	routes.Insert(id, payload.Forwardfrom)
 
 	fmt.Printf("%v\n", payload)
 
