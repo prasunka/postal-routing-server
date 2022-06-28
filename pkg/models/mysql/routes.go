@@ -33,13 +33,11 @@ func (m *RouteModel) Insert(endpoint_id int, name string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// Use the LastInsertId() method on the result object to get the ID of our
-	// newly inserted record in the snippets table.
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
-	// The ID returned has the type int64, so we convert it to an int type
-	// before returning.
+
 	return int(id), nil
 }

@@ -22,6 +22,7 @@ type Payload struct {
 	Signature   string
 }
 
+// Taken from eth_sign_verify.go (https://gist.github.com/dcb9/385631846097e1f59e3cba3b1d42f3ed#file-eth_sign_verify-go)
 func verifySig(from, sigHex string, msg []byte) bool {
 	sig, err := hexutil.Decode(sigHex)
 	if err != nil {
