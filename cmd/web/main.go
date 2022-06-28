@@ -9,10 +9,9 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"github.com/prasunka/postal-routing-server/pkg/models/mysql"
 	"github.com/rs/cors"
 )
-
-var DB *sql.DB
 
 func dsn(envs map[string]string) string {
 	username := envs["DB_USERNAME"]
@@ -33,28 +32,43 @@ func openDB(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
+type application struct {
+	errorLog  *log.Logger
+	infoLog   *log.Logger
+	routes    *mysql.RouteModel
+	endpoints *mysql.EndpointModel
+}
+
 func main() {
 
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	envs, err := godotenv.Read(".env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		errorLog.Fatal("Error loading .env file")
 	}
 
 	dsn := dsn(envs)
-	DB, err = openDB(dsn)
+	DB, err := openDB(dsn)
 	if err != nil {
 		errorLog.Fatal(err)
 	}
 
+	app := &application{
+		infoLog:   infoLog,
+		errorLog:  errorLog,
+		routes:    &mysql.RouteModel{DB: DB},
+		endpoints: &mysql.EndpointModel{DB: DB},
+	}
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/create", createRoute)
+	mux.HandleFunc("/", app.home)
+	mux.HandleFunc("/create", app.createRoute)
 
 	handler := cors.Default().Handler(mux)
 
 	log.Println("Starting server on :4000")
 	err = http.ListenAndServe(":4000", handler)
 
-	log.Fatal(err)
+	errorLog.Fatal(err)
 }

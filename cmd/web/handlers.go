@@ -3,16 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prasunka/postal-routing-server/pkg/models/mysql"
 )
 
-func home(w http.ResponseWriter, r *http.Request) {
+func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello"))
 }
 
@@ -23,10 +21,10 @@ type Payload struct {
 }
 
 // Taken from eth_sign_verify.go (https://gist.github.com/dcb9/385631846097e1f59e3cba3b1d42f3ed#file-eth_sign_verify-go)
-func verifySig(from, sigHex string, msg []byte) bool {
+func (app *application) verifySig(from, sigHex string, msg []byte) bool {
 	sig, err := hexutil.Decode(sigHex)
 	if err != nil {
-		log.Println("Invalid signature!")
+		app.errorLog.Println("Invalid signature!")
 		return false
 	}
 
@@ -43,7 +41,7 @@ func verifySig(from, sigHex string, msg []byte) bool {
 	return from == recoveredAddr.Hex()
 }
 
-func createRoute(w http.ResponseWriter, r *http.Request) {
+func (app *application) createRoute(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -62,19 +60,16 @@ func createRoute(w http.ResponseWriter, r *http.Request) {
 
 	msg := []byte("I allow mails to be forwarded to " + payload.Forwardto)
 
-	if verifySig(payload.Forwardfrom, payload.Signature, msg) {
+	if app.verifySig(payload.Forwardfrom, payload.Signature, msg) {
 		w.Header().Set("Content-Type", "application/json")
 		resp := make(map[string]string)
 
-		routes := mysql.RouteModel{DB: DB}
-		endpoints := mysql.EndpointModel{DB: DB}
-
-		id, err := endpoints.Insert(payload.Forwardto)
+		id, err := app.endpoints.Insert(payload.Forwardto)
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 
-		_, err = routes.Insert(id, payload.Forwardfrom)
+		_, err = app.routes.Insert(id, payload.Forwardfrom)
 
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -85,7 +80,7 @@ func createRoute(w http.ResponseWriter, r *http.Request) {
 
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			app.errorLog.Printf("Error happened in JSON marshal. Err: %s", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 
 		}
