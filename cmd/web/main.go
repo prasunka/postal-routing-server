@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 )
 
 var DB *sql.DB
@@ -33,7 +34,7 @@ func openDB(dsn string) (*sql.DB, error) {
 }
 
 func main() {
-	//infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	envs, err := godotenv.Read(".env")
 	if err != nil {
@@ -50,8 +51,10 @@ func main() {
 	mux.HandleFunc("/", home)
 	mux.HandleFunc("/create", createRoute)
 
+	handler := cors.Default().Handler(mux)
+
 	log.Println("Starting server on :4000")
-	err = http.ListenAndServe(":4000", mux)
+	err = http.ListenAndServe(":4000", handler)
 
 	log.Fatal(err)
 
